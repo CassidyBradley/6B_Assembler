@@ -57,6 +57,21 @@ void Assembler::Assemble(Scanner& in_scanner, string binary_filename,
   PrintMachineCode(binary_filename, out_stream);
   //////////////////////////////////////////////////////////////////////////
   // Dump the results.
+  std::ifstream inputFile(binary_filename, std::ifstream::binary);
+  if(inputFile){
+    inputFile.seekg(0, inputFile.end);
+    int len = inputFile.tellg();
+    inputFile.seekg(0, inputFile.beg);
+
+    char buf[2];
+    for(int j=0; j<len/2; j++){
+      inputFile.read(buf, 2);
+      int16_t valRead = static_cast<int16_t>((buf[1]) | (buf[0] << 8));
+      string binaryCon = DABnamespace::DecToBitString(valRead, 16);
+      out_stream << binaryCon << endl;
+    }
+  }
+  inputFile.close();
 /**************************************************************************
  *  1. Read from the first file and push into a vector
  *  
