@@ -5,7 +5,7 @@
  * Class 'Assembler' for assembling code.
  *
  * Author/copyright:  Duncan A. Buell.  All rights reserved.
- * Used with permission and modified by: Cassidy Bradley
+ * Used with permission and modified by: Cassidy Bradley, Anand Patel
  * Date: 17 August 2018
 **/
 
@@ -45,11 +45,16 @@ void Assembler::Assemble(Scanner& in_scanner, string binary_filename,
   //////////////////////////////////////////////////////////////////////////
   // Pass one
   // Produce the symbol table and detect errors in symbols.
-
+  PassOne(in_scanner);
+  PrintCodeLines();
+  PrintSymbolTable();
   //////////////////////////////////////////////////////////////////////////
   // Pass two
   // Generate the machine code.
-
+  PassTwo();
+  PrintCodeLines();
+  PrintSymbolTable();
+  PrintMachineCode(binary_filename, out_stream);
   //////////////////////////////////////////////////////////////////////////
   // Dump the results.
 /**************************************************************************
@@ -148,6 +153,63 @@ void Assembler::PassOne(Scanner& in_scanner) {
   Utils::log_stream << "enter PassOne" << endl;
 #endif
 
+Utils::log_stream << "Pass One" << endl;
+  pc_in_assembler_ = 0;
+  int lineNum = 0;
+  CodeLine cLine;
+  string nextLineRead;
+  nextLineRead = in_scanner.NextLine();
+  while(nextLineRead.length() > 0 && lineNum < 4096){
+  	cLine = CodeLine();
+  	string mnemonic, lbl, address, symbolOp, hexOp, comments, code;
+  	if(nextLineRead.length() <= 20){
+  		nextLineRead.append(21 - line.length(), ' ');
+  	}
+  	if(nextLineRead[0] == '*'){
+  		cLine.setCommentsOnly(lineNum, nextLineRead);
+  		code = "nullcode";
+  		code.SetMachineCode(code);
+  	}
+  	else{
+  		if(nextLineRead.substr(0, 3) != "   "){
+  			lbl = nextLineRead.substr(0, 3);
+  			if(symboltable_.count(lbl) == 0){
+  				symboltable_.insert({lbl, Symbol(lbl, pc_in_assembler_)});
+  			}
+  			else{
+  				symboltable_.at(lbl).SetMultiply();
+  			}
+  		}
+  		mnemonic = nextLineRead.substr(4, 3);
+  		address = nextLineRead.substr(8, 1);
+  		if(nextLineRead.substr(10, 3) != "   "){
+  			symbolOp = nextLineRead.substr(10, 3);
+  		}
+  		if(nextLineRead.substr(14, 5) != "     "){
+  			hexOp = nextLineRead.substr(14, 5);
+  		}
+  		if(nextLineRead[20] == '*'){
+  			comments = nextLineRead.substr(20);
+  		}
+  		cLine.SetCodeLine(lineNum, pc_in_assembler_, lbl, mnemonic, address, symbolOp, hexOp, comments, kDummyCodeA);
+  		if(mnemonic == "DS"){
+  			pc_in_assembler_ += cLine.GetHexObject().GetValue();
+  		}
+  		else if(mnemonic == "ORG"){
+  			pc_in_assembler_ = cLine.GetHexObject().GetValue();
+  		}
+  		else if(mnemonic != "END"){
+  			pc_in_assembler_ += 1;
+  		}
+  		if(mnemonic == "END"){
+  			found_end_statement_ = true;
+  		}
+  	}
+  	lineNum += 1;
+  	codelines_.push_back(cLine);
+  	nextLineRead = in_scanner.NextLine();
+  }
+
 #ifdef EBUG
   Utils::log_stream << "leave PassOne" << endl;
 #endif
@@ -161,6 +223,54 @@ void Assembler::PassTwo() {
 #ifdef EBUG
   Utils::log_stream << "enter PassTwo" << endl;
 #endif
+  
+  Utils::log_stream << "Pass Two" << endl;
+  string bitStr = "";
+  for(auto iter = codelines_.begin(); iter != codelines_.end(); iter++){
+  	if(!(*iter).IsAllComment()){
+  		map<string, string>::iterator operIter = opcodes.find((*iter).GetMnemonic());
+  		if(operIter != opcodes.end()){
+  			bitStr = opcodes.find((*iter).GetMnemonic())->second;
+  			if((*iter).GetAddr() != "*"){
+  				bitStr += "0";
+  			}
+  			else{
+  				bitStr += "1";
+  			}
+  			map<string, string>::iterator symIter = symboltable_.find((*iter).GetSymOperand());
+  			Symbol sym;
+  			if(symIter != symboltable_.end()){
+  				sym = symboltable_.find((*iter).GetSymOperand())->second;
+  			}
+  			else{
+  				if(bitStr.substr(0, 3) == "111"){
+  					if((*iter).GetMnemonic() == "STP"){
+  						bitStr += "000000000010";
+  					}
+  					else if((*iter).GetMnemonic() == "RD"){
+  						bitStr += "000000000000";
+  					}
+  					else if((*iter).GetMnemonic() == "WRT"){
+  						bitStr += "000000000011";
+  					}
+  				}
+  				else{
+  					bitStr += "ERROR0000000";
+  					Utils::log_stream << "Error at " << (*iter).GetPC() << endl;
+  				}
+  			}
+  		}
+  		else if((*iter).GetMnemonic() == "HEX"){
+  			bitStr = DABnamespace::DecToBitString((*iter).GetHexObject().GetValue(), 16);
+  		}
+  	}
+  	if(bitStr.length() >= 16){
+  		(*iter).SetMachineCode(bitStr);
+  	}
+  	else{
+  		(*iter).SetMachineCode("0000000000000000");
+  	}
+  }
 
 #ifdef EBUG
   Utils::log_stream << "leave PassTwo" << endl;
@@ -203,6 +313,25 @@ void Assembler::PrintMachineCode(string binary_filename,
                     << binary_filename << endl;
 #endif
   string s = "";
+  std::ofstream outFile(binary_filename, std::ofstream::binary);
+  int cnt = 0;
+  for(auto it = codelines_.begin(); it!=codelines_.end(); it++){
+  	if(((*it).GetCode() != "nullcode") && ((*it).GetCode() != kDummyCodeA) && (*it).IsAllComment() && ((*it).GetMnemonic() != "END")){
+  		s += Utils::Format(cnt, 4) + " ";
+  		s += DABnamespace::DecToBitString(cnt, 12) + " ";
+  		s += (*it).GetCode().substr(0, 4) + " " + (*it).GetCode().substr(4, 4) + " " + (*it).GetCode().substr(8, 4) + " " + (*it).GetCode().substr(12, 4) + "\n";
+  		cnt++;
+  		if(outFile){
+  			int16_t ascii16 = DABnamespace::BitStringToDec((*it).GetCode());
+  			char dataToWrite[4];
+  			dataToWrite[0] = static_cast<char>(ascii16 >> 8);
+  			dataToWrite[1] = static_cast<char>(ascii16);
+  			outFile.write(dataToWrite, 2);
+  		}
+  	}
+  }
+  outFile.close();
+  Utils::log_stream << s << endl;
 
 #ifdef EBUG
   Utils::log_stream << "leave PrintMachineCode" << endl;
@@ -217,6 +346,12 @@ void Assembler::PrintSymbolTable() {
 #ifdef EBUG
   Utils::log_stream << "enter PrintSymbolTable" << endl;
 #endif
+  
+  string emptyStr = "";
+  Utils::log_stream << "SYMBOL TABLE\n 	SYM 	LOC 	FLAGS" << endl;
+  for(auto std::pair<string, Symbol> iter : symboltable_){
+  	Utils::log_stream << "SYM" << iter.second.ToString() << endl;
+  }
 
 #ifdef EBUG
   Utils::log_stream << "leave PrintSymbolTable" << endl;
@@ -259,4 +394,16 @@ void Assembler::UpdateSymbolTable(int pc, string symboltext) {
 #ifdef EBUG
   Utils::log_stream << "leave UpdateSymbolTable" << endl;
 #endif
+}
+
+void Assembler::WriteMemory(int pc, string code){
+  for(int i=memory_.size(); i < pc; i++){
+    memory_.push_back(OneMemoryWord(kDummyCodeA));
+  }
+  if((int)memory_.size() == pc){
+    memory_.push_back(OneMemoryWord(code));
+  }
+  else{
+    memory_.at(pc) = OneMemoryWord(code);
+  }
 }
