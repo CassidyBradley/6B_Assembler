@@ -73,9 +73,15 @@ void Symbol::SetMultiply() {
 **/
 bool Symbol::CheckInvalid() const {
   bool returnvalue = false;  // false means no, not invalid
-
-  // code goes here
-
+  if(isalpha(text_[0]) && (isalnum(text_[1]) ||  text_[1] == ' ') 
+                       && (text_[2] == ' ' || isalnum(text_[2]))){
+    returnvalue = false;
+  }
+  else{
+    
+    returnvalue = true;
+  }
+  
   return returnvalue;
 }
 
