@@ -7,8 +7,8 @@
  * Date: 17 August 2018
 **/
 
-#ifndef CODELINE_H
-#define CODELINE_H
+#ifndef ONEMEMORYWORD_H
+#define ONEMEMORYWORD_H
 
 #include <iostream>
 #include <string>
