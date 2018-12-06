@@ -56,7 +56,12 @@ string CodeLine::GetComments() const {
 string CodeLine::GetErrorMessages() const {
   return error_messages_;
 }
-
+/***************************************************************************
+ * Accessor for the 'pc_'
+**/
+string CodeLine::GetPC() const{
+  return pc_;
+}
 /***************************************************************************
  * Accessor for the 'hex_'.
 **/
