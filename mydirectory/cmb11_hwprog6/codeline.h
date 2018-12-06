@@ -26,7 +26,7 @@ using std::string;
 
 class CodeLine {
  public:
-  CodeLine();
+  CodeLine(string code);
   virtual ~CodeLine();
 
   string GetAddr() const;
