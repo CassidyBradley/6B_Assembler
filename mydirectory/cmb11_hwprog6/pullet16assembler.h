@@ -29,6 +29,7 @@ using std::vector;
 #include "../../Utilities/scanline.h"
 #include "../../Utilities/utils.h"
 
+#include "onememoryword.h"
 #include "dabnamespace.h"
 #include "codeline.h"
 #include "hex.h"
@@ -53,21 +54,30 @@ class Assembler {
 
   int pc_in_assembler_;
   int maxpc_;
-  vector<CodeLine> codelines_;
+  vector<CodeLine> codelines_
+  vector<OneMemoryWord> memory_;
   map<int, string> machinecode_;
   map<string, Symbol> symboltable_;
-  map<string, string> opcodes_;
+  map<string, string> opcodes = { {"BAN", "000"},
+                    {"SUB", "001"},
+                    {"STC", "010"},
+                    {"AND", "011"},
+                    {"ADD", "100"},
+                    {"LD ", "101"},
+                    {"BR ", "110"}
+                  };
   set<string> mnemonics_;
 
-  string GetInvalidMessage(string leadingtext, string invalidstring);
-  string GetInvalidMessage(string leadingtext, Hex hex);
-  string GetUndefinedMessage(string badtext);
+  string GetInvalidMessage(string errortext);
+  string GetUndefinedMessage(string errortext);
+  string GetUndefinedMessage(string errortext);
   void PassOne(Scanner& in_scanner);
   void PassTwo();
   void PrintCodeLines();
   void PrintMachineCode(string binary_filename, ofstream& out_stream);
   void PrintSymbolTable();
   void SetNewPC(CodeLine codeline);
-  void UpdateSymbolTable(int programcounter, string label);
+  void UpdateSymbolTable(int programcounter, string label
+  void WriteMemory(int programcounter, string code);
 };
 #endif
