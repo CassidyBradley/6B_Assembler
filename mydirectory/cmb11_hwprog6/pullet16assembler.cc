@@ -240,51 +240,81 @@ void Assembler::PassTwo() {
 #endif
   
   Utils::log_stream << "Pass Two" << endl;
-  string bitStr = "";
-  for(auto iter = codelines_.begin(); iter != codelines_.end(); iter++){
-  	if(!(*iter).IsAllComment()){
-  		map<string, string>::iterator operIter = opcodes.find((*iter).GetMnemonic());
-  		if(operIter != opcodes.end()){
-  			bitStr = opcodes.find((*iter).GetMnemonic())->second;
-  			if((*iter).GetAddr() != "*"){
-  				bitStr += "0";
-  			}
-  			else{
-  				bitStr += "1";
-  			}
-  			map<string, string>::iterator symIter = symboltable_.find((*iter).GetSymOperand());
-  			Symbol sym;
-  			if(symIter != symboltable_.end()){
-  				sym = symboltable_.find((*iter).GetSymOperand())->second;
-  			}
-  			else{
-  				if(bitStr.substr(0, 3) == "111"){
-  					if((*iter).GetMnemonic() == "STP"){
-  						bitStr += "000000000010";
-  					}
-  					else if((*iter).GetMnemonic() == "RD"){
-  						bitStr += "000000000000";
-  					}
-  					else if((*iter).GetMnemonic() == "WRT"){
-  						bitStr += "000000000011";
-  					}
-  				}
-  				else{
-  					bitStr += "ERROR0000000";
-  					Utils::log_stream << "Error at " << (*iter).GetPC() << endl;
-  				}
-  			}
-  		}
-  		else if((*iter).GetMnemonic() == "HEX"){
-  			bitStr = DABnamespace::DecToBitString((*iter).GetHexObject().GetValue(), 16);
-  		}
-  	}
-  	if(bitStr.length() >= 16){
-  		(*iter).SetMachineCode(bitStr);
-  	}
-  	else{
-  		(*iter).SetMachineCode("0000000000000000");
-  	}
+  pc_in_assembler_ = 0;
+  found_end_statement_ = false;
+  // int code_line_size = codelines_.size();
+  bool set_machine;
+  for (unsigned int i = 0; i < codelines_.size(); ++i) {
+    string symbol = codelines_.at(i).GetSymOperand();
+    Symbol sym = symboltable_.at(symbol);
+    int location = sym.GetLocation();
+    string bit_four = "0";
+    if (codelines_.at(i).GetAddr() == "*") {
+      //:((((((
+      CodeLine indirect_addr = codelines_.at(location);
+      Symbol temp_sym = symboltable_.at(indirect_addr.GetSymOperand());
+      location = temp_sym.GetLocation();
+      bit_four = "1";
+    }
+    //direct addresss
+    CodeLine direct_addr = codelines_.at(location);
+    Hex hex = direct_addr.GetHexObject();
+    int hex_decimal = hex.GetValue();
+    bit_four += DABnamespace::DecToBitString(hex_decimal, 12);
+
+    // ^ finding address
+    string code = "";
+    string mnemonic = mnemonics_.find(codelines_.at(i).GetMnemonic());
+    Hex hex2 = codelines_.at(i).GetHexObject();
+    int hex2_decimal = hex2.GetValue();
+    set_machine = true;
+    SetNewPC(codelines_.at(i));
+    
+    if (mnemonic == "BAN") {
+      code += "000" + bit_four;
+    } else if (mnemonic == "SUB") {
+        code += "001" + bit_four;
+    } else if (mnemonic == "STC") {
+        code += "010" + bit_four;
+    } else if (mnemonic == "AND") {
+        code += "011" + bit_four;
+    } else if (mnemonic == "ADD") {
+        code += "100" + bit_four;
+    } else if (mnemonic == "LD ") {
+        code += "101" + bit_four;
+    } else if (mnemonic == "BR ") {
+        code += "110" + bit_four;
+    } else if (mnemonic == "RD ") {
+        code += "1110000000000001";
+    } else if (mnemonic == "STP") {
+        code += "1110000000000010";
+    } else if (mnemonic == "WRT") {
+        code += "1110000000000011";
+    } else if (mnemonic == "ORG") {
+        set_machine = false;
+	if ((hex2_decimal-1) < 4096 && (hex2_decimal-1) > 0) {
+          pc_in_assembler_ = hex2_decimal -1;
+        }
+    } else if (mnemonic == "DS ") {
+        set_machine = false;
+        for (unsigned int i = 0; i < hex2_decimal; ++i) {
+          machinecode_.at(pc_in_assembler_+i) = "1111111111111111";
+        }
+    } else if (mnemonic == "HEX") {
+        code = DABnamespace::DecToBitString(hex2_decimal, 16);
+    } else if (mnemonic == "END") {
+        set_machine = false;
+        found_end_statement_ = false;
+        break;
+    } else {
+        this->GetInvalidMessage("INVALID MNEMONIC", mnemonic);
+        Utils::log_stream << "Mnemonic was invalid" << endl;
+    }
+    
+    if (set_machine == true) {
+      codelines_.at(i).SetMachineCode(code);
+      machinecode_.at(pc_in_assembler_) = code;
+    }
   }
 
 #ifdef EBUG
