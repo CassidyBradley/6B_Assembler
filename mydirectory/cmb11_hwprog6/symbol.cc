@@ -18,7 +18,10 @@ Symbol::Symbol() {
  * Constructor
 **/
 Symbol::Symbol(string text, int programcounter) {
-  // code goes here
+  text_ = text;
+  location_ = programcounter;
+  is_invalid_ = CheckInvalid();
+  is_multiply_ = false;
 }
 
 /******************************************************************************
@@ -32,16 +35,6 @@ Symbol::~Symbol() {
 **/
 
 /******************************************************************************
- * Accessor for 'error_messages_'.
-**/
-string Symbol::GetErrorMessages() const {
-  bool previouserror = false;
-  string error_messages = "";
-
-  return error_messages;
-}
-
-/******************************************************************************
  * Accessor for the 'location_'.
 **/
 int Symbol::GetLocation() const {
@@ -53,6 +46,20 @@ int Symbol::GetLocation() const {
 **/
 bool Symbol::HasAnError() const {
   return (is_invalid_ || is_multiply_);
+}
+
+/******************************************************************************
+ * Returns true if the symbol is invalid.
+**/
+bool Symbol::IsInvalid() const {
+  return is_invalid_;
+}
+
+/*****************************************************************************
+ * Returns true if the symbol is multiply defined.
+**/
+bool Symbol::IsMultiply() const {
+  return is_multiply_;
 }
 
 /******************************************************************************
