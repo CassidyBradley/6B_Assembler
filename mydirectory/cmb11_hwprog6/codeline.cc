@@ -57,12 +57,6 @@ string CodeLine::GetErrorMessages() const {
   return error_messages_;
 }
 /***************************************************************************
- * Accessor for the 'pc_'
-**/
-string CodeLine::GetPC() const{
-  return pc_;
-}
-/***************************************************************************
  * Accessor for the 'hex_'.
 **/
 Hex CodeLine::GetHexObject() const {
@@ -82,6 +76,9 @@ string CodeLine::GetLabel() const {
 string CodeLine::GetMnemonic() const {
   return mnemonic_;
 }
+int CodeLine::GetPC() const {
+  return pc;
+}
 
 /***************************************************************************
  * Accessor for the 'symoperand_'.
@@ -94,16 +91,17 @@ string CodeLine::GetSymOperand() const {
  * Boolean indicator of the presence of a label.
 **/
 bool CodeLine::HasLabel() const {
-  bool something = false;
-  return something;
+  bool returnValue = !(label_.empty() || label_ == "nulllabel");
+  return returnValue;
 }
+
 
 /***************************************************************************
  * Boolean indicator of the presence of a symbolic operand.
 **/
 bool CodeLine::HasSymOperand() const {
-  bool something = false;
-  return something;
+ bool returnValue = !(symoperand_.empty() || symoperand_ == "nullsymoperand");
+  return returnValue;
 }
 
 /***************************************************************************
@@ -155,6 +153,10 @@ void CodeLine::SetCodeLine(int linecounter, int pc, string label,
  *   line - the code line that is taken to be all comments
 **/
 void CodeLine::SetCommentsOnly(int linecounter, string line) {
+  comments_ = line;
+  linecounter_ = linecounter;
+  is_all_comment_ = true;
+  linecounter_ = linecounter;
 }
 
 /***************************************************************************
@@ -165,6 +167,7 @@ void CodeLine::SetCommentsOnly(int linecounter, string line) {
  *   messages - the string of messages
 **/
 void CodeLine::SetErrorMessages(string messages) {
+  error_messages_ = messages;
 }
 
 /***************************************************************************
@@ -175,6 +178,7 @@ void CodeLine::SetErrorMessages(string messages) {
  *   code - the code to set
 **/
 void CodeLine::SetMachineCode(string code) {
+  code_ = code;
 }
 
 /***************************************************************************
@@ -185,6 +189,7 @@ void CodeLine::SetMachineCode(string code) {
  *   what - the value to set as the PC
 **/
 void CodeLine::SetPC(int what) {
+  pc_ = what;
 }
 
 /***************************************************************************
