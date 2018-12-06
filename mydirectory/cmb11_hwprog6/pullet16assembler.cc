@@ -125,20 +125,6 @@ string Assembler::GetInvalidMessage(string leadingtext, string symbol) {
 }
 
 /***************************************************************************
- * Function 'GetInvalidMessage'.
- * This creates a "value is invalid" error message.
- *
- * Parameters:
- *   leadingtext - the text of what it is that is invalid
- *   hex - the hex operand that is invalid
-**/
-string Assembler::GetInvalidMessage(string leadingtext, Hex hex) {
-  string returnvalue = "";
-
-  return returnvalue;
-}
-
-/***************************************************************************
  * Function 'GetUndefinedMessage'.
  * This creates a "symbol is undefined" error message.
  *
@@ -149,6 +135,17 @@ string Assembler::GetUndefinedMessage(string badtext) {
   string returnvalue = "";
   return returnvalue;
 }
+
+/***************************************************************************
+*
+*
+*
+*
+*
+*
+*
+*
+
 
 /***************************************************************************
  * Function 'PassOne'.
